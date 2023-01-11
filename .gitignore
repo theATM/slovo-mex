@@ -4,4 +4,5 @@ MEx*
 .idea*
 *mp4
 .ipynb*
-*__pycache__/*
+utilities/__pycache__/*
+vov*
