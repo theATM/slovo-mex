@@ -4,3 +4,4 @@ MEx*
 .idea*
 *mp4
 .ipynb*
+*__pycache__/*
