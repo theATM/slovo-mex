@@ -62,6 +62,9 @@ class Standardizer:
         return standardized_data
 
 class PcaActApplier:
+    '''
+    Fits and applies PCA for each accelerometer axis independently
+    '''
     def __init__(self, n_components) -> None:
         self.pca = [PCA(n_components), PCA(n_components), PCA(n_components)]
 
@@ -79,6 +82,9 @@ class PcaActApplier:
         return self.pca
 
 class LdaActApplier:
+    '''
+    Fits and applies LDA for each accelerometer axis independently
+    '''
     def __init__(self, n_components) -> None:
         self.lda = LDA(n_components = n_components), LDA(n_components = n_components), LDA(n_components = n_components)
 
@@ -115,12 +121,10 @@ def act_fusion(act_pca_train, act_lda_train, act_pca_test, act_lda_test, train_l
         labels[i] = label
     return labels
 
-'''
-Task 2.2 helpers
-'''
+
 class PcaDcApplier:
     '''
-    Applies Pca to the data of Depth sensor modality
+    Fits and applies PCA to the data of Depth sensor modality
     '''
     def __init__(self, n_components) -> None:
         self.pca = PCA(n_components)
