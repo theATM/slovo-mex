@@ -11,9 +11,9 @@ class DataNormalizer:
         self.min = None
         self.max = None
 
-    def fit(self,data) -> None:
-        self.min = np.min(data, axis=0)
-        self.max = np.max(data, axis=0)
+    def fit(self,data,axis) -> None:
+        self.min = np.min(data,axis=axis)
+        self.max = np.max(data,axis=axis)
 
     def transform(self,data):
         return (data - self.min) / (self.max - self.min)
@@ -57,10 +57,10 @@ class GridClassifier:
 
 # SVM:
 
-def svm_classify(train_data, train_labels, test_data=None, svm_params = None):
+def svm_classify(train_data, train_labels, test_data=None, svm_params = None, kfold=10):
     svm_cls = svm.SVC(kernel='rbf',random_state=0)
     svm_params = {'C' : [0.1, 1.0, 10.0, 100.0], 'gamma' : [0.1, 0.25, 0.5, 0.75, 1.0, 2.0]} if svm_params is None else svm_params
-    svm_search = GridSearchCV(svm_cls, svm_params,scoring='f1_macro',cv=10)
+    svm_search = GridSearchCV(svm_cls, svm_params,scoring='f1_macro',cv=kfold)
     svm_search.fit(train_data,train_labels)
     svm_best = svm.SVC(C=svm_search.best_params_['C'], kernel='rbf',gamma=svm_search.best_params_['gamma'], random_state=0,probability=True)
     svm_best.fit(train_data,train_labels)
