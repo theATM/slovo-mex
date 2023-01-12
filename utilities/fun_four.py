@@ -12,8 +12,8 @@ class DataNormalizer:
         self.max = None
 
     def fit(self,data) -> None:
-        self.min = np.min(data)
-        self.max = np.max(data)
+        self.min = np.min(data, axis=0)
+        self.max = np.max(data, axis=0)
 
     def transform(self,data):
         return (data - self.min) / (self.max - self.min)
