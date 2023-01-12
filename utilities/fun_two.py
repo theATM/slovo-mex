@@ -4,12 +4,13 @@ import pandas as pd
 from scipy import signal
 from sklearn.decomposition import PCA
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis as LDA
-from sklearn.neighbors import KNeighborsClassifier
 from sklearn.metrics import confusion_matrix, f1_score, ConfusionMatrixDisplay
 from copy import deepcopy
 import time
 
-''' Task 2.1 Helpers'''
+'''
+Task 2.1 Helpers
+'''
 def acccelerometer_resample(data,n_samples=125):
     return data[data.sensor_code=='act'].df.apply(
             lambda x: pd.DataFrame().assign(
@@ -19,21 +20,39 @@ def acccelerometer_resample(data,n_samples=125):
 
 
 class Standardizer:
+    '''
+    Helper class performing standardization of the datasets
+    '''
     def __init__(self) -> None:
         self.mean = None
         self.std = None
 
     def fit(self, data,df_name='df') -> None:
-        '''Concatenate all dataframes to one to calculate mean and std'''
+        '''
+        Fits the standardizer to the given data. Sets self.mean and self.std
+        :param data: nested pandas dataframe, eg. training_data
+        :return: None
+        '''
+        # to fit dataset, all data frames of column 'df' are concatenated to one
         samples_concatenated = pd.concat(data[df_name].values, ignore_index=True)
+
+        # drop the time column, as it is not needed
         if 'time' in samples_concatenated:
             samples_concatenated = samples_concatenated.drop('time', axis=1)
+
+        # the mean and std are calculated for each feature separately. Mean and STD shape is 1*n_features(columns)
         self.mean = np.mean(samples_concatenated, axis=0)
         self.std = np.std(samples_concatenated, axis=0)
 
     def transform(self, data,df_name='df'):
-        standardized_data = deepcopy(data)
+        '''
+        Applies the standardization to the given data
+        :param data: nested pandas dataframe, eg. testing_data
+        :return: standardized data
+        '''
 
+        standardized_data = deepcopy(data)
+        # standardize data frame of each sample in param: data
         for index, row in standardized_data.iterrows():
             df = row[df_name]
             if 'time' in df:
@@ -41,11 +60,6 @@ class Standardizer:
             df_standardized = (df - self.mean) / self.std
             standardized_data.at[index,df_name] = df_standardized
         return standardized_data
-
-    def display_mean_and_std(self) -> None:
-        display(self.mean)
-        display(self.std)
-
 
 class PcaActApplier:
     def __init__(self, n_components) -> None:
@@ -101,14 +115,18 @@ def act_fusion(act_pca_train, act_lda_train, act_pca_test, act_lda_test, train_l
         labels[i] = label
     return labels
 
-'''Task 2.2 helpers'''
-#helper class
+'''
+Task 2.2 helpers
+'''
 class PcaDcApplier:
+    '''
+    Applies Pca to the data of Depth sensor modality
+    '''
     def __init__(self, n_components) -> None:
         self.pca = PCA(n_components)
 
     def fit(self, data, df_name='df') -> None:
-        '''Concatenate all dataframes to one'''
+        # to fit PCA on the whole training dataset we need to concatenate values of each child dataframe
         samples_concatenated = pd.concat(data[df_name].values, ignore_index=True)
         self.pca.fit(samples_concatenated)
 
@@ -118,6 +136,9 @@ class PcaDcApplier:
         return pca_transformed_data
 
 class LdaDcApplier:
+    '''
+    Fits and applies LDA to the data of Depth sensor modality
+    '''
     def __init__(self, n_components) -> None:
         self.lda = LDA(n_components = n_components)
 
@@ -138,6 +159,63 @@ class LdaDcApplier:
         return lda_transformed_data
 
 #helper methods
+def concat_pca_lda(pca_data, lda_data,df_name='df'):
+    '''
+    Concatenates PCA and LDA dataframes on the key of row index
+    :return concatenated data
+        concatenated_data['df'] dataframes are np.arrays of shape 1x50
+            -first 25 features (5 images * 5 PCA features) are from PCA
+            -last 25 features (5 images * 5 LDA features) are from LDA
+    '''
+    concatenated_data = deepcopy(pca_data)
+    for index in concatenated_data.index:
+        pca_reshaped = pca_data[df_name].loc[index].reshape(1,-1)
+        lda_reshaped = lda_data[df_name].loc[index].reshape(1,-1)
+        df_concatenated = np.concatenate([pca_reshaped, lda_reshaped], axis=1)
+        concatenated_data.at[index,df_name] = df_concatenated.flatten()
+    return concatenated_data
+
+def classifyNN(train_data, test_data):
+    pca_range = range(0,25)  # pca features are in columns 0-25
+    lda_range = range(25,50) # lda features are in columns 25-50
+
+    # output variable with pairs of real and estimated labels
+    estimated_test_data_labels = pd.DataFrame([], columns=['real_label', 'estimated_label'])
+    # iterate over all test samples
+    for test_index, test_item in test_data.iterrows():
+        pca_test = test_item['df'][pca_range]
+        lda_test = test_item['df'][lda_range]
+
+        # iterate over all train samples and calculate distances to them
+        distances = pd.DataFrame([], columns=['dn_pca', 'Dn_lda'])
+        for train_index, train_item in train_data.iterrows():
+            pca_train = train_item['df'][pca_range]
+            lda_train = train_item['df'][lda_range]
+            dn_pca = np.sum((pca_test - pca_train)**2) # PCA distance
+            Dn_lda = np.sum((lda_test - lda_train)**2) # LDA distance
+
+            distances.at[train_index, 'dn_pca'] = dn_pca
+            distances.at[train_index, 'Dn_lda'] = Dn_lda
+
+        # calculate minimal and maximal distances used for scaling
+        min_dn_pca = np.min(distances['dn_pca'])
+        max_dn_pca = np.max(distances['dn_pca'])
+        min_Dn_lda = np.min(distances['Dn_lda'])
+        max_Dn_lda = np.max(distances['Dn_lda'])
+
+        # scale distances
+        distances['dn_pca'] = (distances['dn_pca'] - min_dn_pca)/(max_dn_pca - min_dn_pca)
+        distances['Dn_lda'] = (distances['Dn_lda'] - min_Dn_lda)/(max_Dn_lda - min_Dn_lda)
+
+        # fuse distances with averaging
+        distances['fused_distances'] = 0.5*(distances['dn_pca']+distances['Dn_lda'])
+
+        '''save pair of true and predicted labels'''
+        estimated_test_data_labels.at[test_index, 'real_label'] = test_item['exercise_id']
+        # predicted label is the label of the nearest sample (with shortest distance)
+        estimated_test_data_labels.at[test_index, 'estimated_label'] = train_data['exercise_id'].loc[distances.index[np.argmin(distances['fused_distances'])]]
+    return estimated_test_data_labels
+
 '''def concat_pca_lda(pca_data, lda_data):
     concatenated_data = deepcopy(pca_data)
     for index in concatenated_data.index:
@@ -183,52 +261,3 @@ class LdaDcApplier:
         new_estimation = pd.DataFrame([{'test_item_index': test_index,'real_label': real_label, 'estimated_label': estimated_label}])
         estimated_test_data_labels = pd.concat([estimated_test_data_labels, new_estimation], axis=0, ignore_index=True)
     return estimated_test_data_labels'''
-
-
-def concat_pca_lda(pca_data, lda_data,df_name='df'):
-    concatenated_data = deepcopy(pca_data)
-    for index in concatenated_data.index:
-        pca_reshaped = pca_data[df_name].loc[index].reshape(1,-1)
-        lda_reshaped = lda_data[df_name].loc[index].reshape(1,-1)
-        df_concatenated = np.concatenate([pca_reshaped, lda_reshaped], axis=1)
-        concatenated_data.at[index,df_name] = df_concatenated.flatten()
-    return concatenated_data
-
-def classifyNN(train_data, test_data):
-    pca_range = range(0,25)  # pca features are in columns 0-5
-    lda_range = range(25,50) # lda features are in columns 5-10
-
-    estimated_test_data_labels = pd.DataFrame([], columns=['real_label', 'estimated_label'])
-
-    #iterate over all samples to classify
-    for test_index, test_item in test_data.iterrows():
-        pca_test = test_item['df'][pca_range]
-        lda_test = test_item['df'][lda_range]
-
-        distances = pd.DataFrame([], columns=['dn_pca', 'Dn_lda'])
-        for train_index, train_item in train_data.iterrows():
-            pca_train = train_item['df'][pca_range]
-            lda_train = train_item['df'][lda_range]
-            dn_pca = np.sum((pca_test - pca_train)**2)
-            Dn_lda = np.sum((lda_test - lda_train)**2)
-
-            distances.at[train_index, 'dn_pca'] = dn_pca
-            distances.at[train_index, 'Dn_lda'] = Dn_lda
-
-        # calculate minimal and maximal distances
-        min_dn_pca = np.min(distances['dn_pca'])
-        max_dn_pca = np.max(distances['dn_pca'])
-        min_Dn_lda = np.min(distances['Dn_lda'])
-        max_Dn_lda = np.max(distances['Dn_lda'])
-
-        # scale distances
-        distances['dn_pca'] = (distances['dn_pca'] - min_dn_pca)/(max_dn_pca - min_dn_pca)
-        distances['Dn_lda'] = (distances['Dn_lda'] - min_Dn_lda)/(max_Dn_lda - min_Dn_lda)
-
-        # fuse distances
-        distances['fused_distances'] = 0.5*(distances['dn_pca']+distances['Dn_lda'])
-
-        # save labels
-        estimated_test_data_labels.at[test_index, 'real_label'] = test_item['exercise_id']
-        estimated_test_data_labels.at[test_index, 'estimated_label'] = train_data['exercise_id'].loc[distances.index[np.argmin(distances['fused_distances'])]]
-    return estimated_test_data_labels
