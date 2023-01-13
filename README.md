@@ -6,6 +6,7 @@ In addition, there is an optional task to try some different approaches to ident
 Open MEx dataset from UCI machine learning repository is used. Idea is to apply different techniques to recognize
 physical exercises from wearable sensors and depth camera, user-independently.
 
+
 ## Authors
 
 
@@ -16,17 +17,6 @@ Jan Fabian
 Student numbers:
 2207367,
 2207371
-
-When $a \ne 0$, there are two solutions to $(ax^2 + bx + c = 0)$ and they are 
-$$ x = {-b \pm \sqrt{b^2-4ac} \over 2a} $$
-
-
-
-$\sqrt{3x-1}+(1+x)^2$
-
-
-
-
 
 
 ## Usage
@@ -80,17 +70,13 @@ where 1-4 are compulsory (max. 10 points each), and 5 is optional to get bonus p
 
 The results are validated using confusion matrices and F1 scores. F1 macro score is given as
 
-<br>
-<br>
-$
-\begin{equation}
-F1_{macro} = \frac{1}{N} \sum_i^N F1_i,
-\end{equation}
-$
-<br>
-<br>
-where $F1_i = 2  \frac{precision_i * recall_i}{precision_i + recall_i}$, and $N$ is the number of labels.
-<br>
+
+$\ F1_{macro} = \frac{1}{N} \displaystyle\sum_i^N F1_i, $
+
+where $F1_i = 2  \frac{precision_i * recall_i}{precision_i + recall_i} $, and $N$ is the number of labels.
+
+
+
 
 
 ## Learning goals
