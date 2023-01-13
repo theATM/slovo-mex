@@ -159,11 +159,12 @@ class PcaDcApplier:
         self.pca = PCA(n_components)
 
     def fit(self, data, df_name='df') -> None:
-        # to fit PCA on the whole training dataset we need to concatenate values of each child dataframe
+        # fit PCA on the whole training dataset we need to concatenate values of each child dataframe
         samples_concatenated = pd.concat(data[df_name].values, ignore_index=True)
         self.pca.fit(samples_concatenated)
 
     def transform(self, data,df_name='df'):
+        # transform values of each child dataframe in given column (by default 'df') with fitted PCA
         pca_transformed_data = deepcopy(data)
         pca_transformed_data[df_name] = pca_transformed_data[df_name].apply(self.pca.transform)
         return pca_transformed_data
@@ -176,17 +177,21 @@ class LdaDcApplier:
         self.lda = LDA(n_components = n_components)
 
     def fit(self, data, df_name='df') -> None:
+        # fit LDA on the whole training dataset we need to concatenate values of each child dataframe
         samples_concatenated = pd.concat(data[df_name].values, ignore_index=True)
+
+        # as LDA requires also 'y' parameter, we need to create corresponding list of labels
         labels = []
         time_window_length = data[df_name].values[0].shape[0]
 
         for index, value in data['exercise_id'].values:
             for i in range(0, time_window_length):
-                labels = np.append(labels,value)
+                labels = np.append(labels, value)
 
         self.lda.fit(samples_concatenated, labels)
 
     def transform(self, data, df_name='df'):
+        # transform values of each child dataframe in given column (by default 'df') with fitted LDA
         lda_transformed_data = deepcopy(data)
         lda_transformed_data[df_name] = lda_transformed_data[df_name].apply(self.lda.transform)
         return lda_transformed_data
