@@ -95,7 +95,7 @@ def visualize_depth(data,subject_id,exercise_id,sample_id=None,window_id=0):
 
 def visualize_acceleration(data,subject_id,exercise_id,window_id=0):
     '''
-    Visualize acceleration readings as as 3 timeseries.
+    Visualize acceleration readings as 3 timeseries for each accelerometer axis.
     '''
     accele_np = filter_dataframe(data,subject_id,exercise_id,'act',window_id)
     accele_time = accele_np[:,0] # get timestamps 100Hz
