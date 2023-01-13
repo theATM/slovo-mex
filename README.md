@@ -38,6 +38,7 @@ Project was made in Python 3.10
 * slovo_three.ipynb - Notebook with Task 3 completed
 * slovo_four.ipynb - Notebook with Task 4 completed
 * slovo_five.ipynb - Notebook with Task 5 completed 
+* slovo_mex.ipynb - Notebook with the third attempt at task 5.2
 
 
 * utilities - directory with python supporting files
