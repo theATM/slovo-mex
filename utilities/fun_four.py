@@ -54,6 +54,10 @@ class GridClassifier:
 #    #ada_pred_test = ada_best.predict(test_data)
 #    return ada_best
 
+def clf_classify(model, train_data, train_labels,  params = None, kfold=10):
+    search = GridSearchCV(model, params, scoring='f1_macro', cv=kfold)
+    search.fit(train_data,train_labels)
+    return search.best_params_
 
 # SVM:
 
