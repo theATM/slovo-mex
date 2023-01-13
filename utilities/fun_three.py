@@ -6,7 +6,7 @@ from sklearn.naive_bayes import GaussianNB
 
 
 def reshape_dataframe(df):
-    # reshape dataframe with PCA feature values of recording window from 5x10 to 1x50
+    '''reshape dataframe with PCA feature values of recording window from 5x10 to 1x50'''
     return df.reshape(1, -1)
 
 
@@ -46,6 +46,6 @@ class Normalizer:
 
 
 def merge_dataframes(row):
-    # Merge PCA of from accelerometer and depth sensor to one feature vector with 86 fetures
+    ''' Merge PCA of from accelerometer and depth sensor to one feature vector with 86 feture'''
     row['df_merged'] = np.concatenate([row['df_x'], row['df_y']], axis=1)
     return row
