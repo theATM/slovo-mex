@@ -11,7 +11,15 @@ import time
 '''
 Task 2.1 Helpers
 '''
+
 def acccelerometer_resample(data,n_samples=125):
+    '''
+    This Function is ment to resample accelerometer data
+    from training or testing DataFrames (based on df_records_windowed)
+    :param data: DataFrame with df and sensor_code columns
+    :param n_samples: number of samples in the resampled signal
+    :return: data DataFrame with modified (resampled) df column
+    '''
     return data[data.sensor_code=='act'].df.apply(
             lambda x: pd.DataFrame().assign(
                 act_0=signal.resample(x.acc_0,n_samples),
@@ -102,22 +110,43 @@ class LdaActApplier:
         return self.lda
 
 def act_fusion(act_pca_train, act_lda_train, act_pca_test, act_lda_test, train_labels):
-    #Combine data to array:
+    '''
+    Perform the fusion of PCA and LDA similar manner as presented
+    in Lecture 3 (pages 24-25) using NN method.
+    First the LDA and PCA data 3*(5+5) is concatenated one array (15+15) = 30 features.
+    This vectors are fed into the nearest neighbour classification which
+    is performed based on the similarity of a given vector to one of the vectors
+    form the training set. The predicted labels are returned.
+    :param act_pca_train: Dataset used as a vector db in the NN classification - the PCA half
+    :param act_lda_train: Dataset used as a vector db in the NN classification - the LDA half
+    :param act_pca_test: Dataset to be classified - the PCA half
+    :param act_lda_test: Dataset to be classified - the LDA half
+    :param train_labels: Ground truth labels for the training set
+    :return: Array of predicted labels for the test set
+    '''
+    #Combine pca and lda data channels to one array 3*(5+5) -> 15+15:
     cobined  = np.concatenate((act_pca_train[0],act_pca_train[1],act_pca_train[2],act_lda_train[0],act_lda_train[1],act_lda_train[2]),axis=1)
     test_cobined  = np.concatenate((act_pca_test[0],act_pca_test[1],act_pca_test[2],act_lda_test[0],act_lda_test[1],act_lda_test[2]),axis=1)
-    # Fusion
+    # Fusion loop:
     labels = np.zeros(test_cobined.shape[0])
-    for i,sample in enumerate(test_cobined): # chose one data point to classify # (N, K,  xyz )
+    for i,sample in enumerate(test_cobined):
+        # for each one test data point to classify # (N, K)
         d = np.zeros(cobined.shape[0])
         D = np.zeros(cobined.shape[0])
-        for n in range(0,cobined.shape[0]): # Iterate over all samples
+        for n in range(0,cobined.shape[0]):
+            # Iterate over all training samples and compare them to the testing sample
             d[n] = np.sum( [ (sample[k] - cobined[n][k])**2 for k in range(0,15) ],axis=0)
             D[n] = np.sum( [ (sample[k] - cobined[n][k])**2 for k in range(15,30)],axis=0)
+        # Normalize the d and D arrays:
         d = (d - np.min(d)) / ( np.max(d) - np.min(d))
         D = (D - np.min(D)) / ( np.max(D) - np.min(D))
+        # Fuse them
         F = 0.5 * (d + D)
+        # Get index of the most similar training vector to the test sample:
         n_star = np.argmin(F)
+        # get the label of that training vector:
         label = train_labels.to_numpy()[n_star] # array with exercise_id
+        # assign it to the testing sample as it is 'nearest neighbour's'
         labels[i] = label
     return labels
 
