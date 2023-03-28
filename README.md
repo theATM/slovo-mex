@@ -52,7 +52,12 @@ Project was made in Python 3.10
 * .gitignore - list of files omitted by source control
 * MEx - directory with the MEx dataset, please obtain it by yourself and place it there
 
+## Results
+SVM-act and SMV-dc model fusion with min rule,   
+Mex Testing data F1 score = 0.9834    
+(Training Data F1 score = 1.0)
 
+![image](https://user-images.githubusercontent.com/48883111/228382640-f1e9e4a4-496f-4f72-aba6-1dcd9dedee8b.png)
 
 
 ## Original Assigment Description
